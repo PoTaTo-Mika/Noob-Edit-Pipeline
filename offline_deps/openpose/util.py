@@ -34,14 +34,8 @@ DEPTH_ANYTHING_V2_MODEL_NAME_DICT = {
 }
 
 temp_dir = tempfile.gettempdir()
-annotator_ckpts_path = os.path.join(Path(__file__).parents[2], 'ckpts')
+annotator_ckpts_path = os.path.join(Path(__file__).parents[2], 'checkpoints')
 USE_SYMLINKS = False
-
-try:
-    annotator_ckpts_path = os.environ['AUX_ANNOTATOR_CKPTS_PATH']
-except:
-    warnings.warn("Custom pressesor model path not set successfully.")
-    pass
 
 try:
     USE_SYMLINKS = literal_eval(os.environ['AUX_USE_SYMLINKS'])
@@ -286,10 +280,20 @@ def custom_torch_download(filename, ckpts_dir=annotator_ckpts_path):
     print(f"model_path is {model_path}")
     return model_path
 
-def custom_hf_download(pretrained_model_or_path, filename, cache_dir=temp_dir, ckpts_dir=annotator_ckpts_path, subfolder='', use_symlinks=USE_SYMLINKS, repo_type="model"):
+def custom_hf_download(pretrained_model_or_path, filename, cache_dir=temp_dir, ckpts_dir=annotator_ckpts_path, subfolder='', use_symlinks=USE_SYMLINKS, repo_type="model", local_sub_dir=None):
 
-    local_dir = os.path.join(ckpts_dir, pretrained_model_or_path)
-    model_path = Path(local_dir).joinpath(*subfolder.split('/'), filename).__str__()
+    if local_sub_dir:
+        local_dir = os.path.join(ckpts_dir, local_sub_dir)
+    else:
+        local_dir = os.path.join(ckpts_dir, pretrained_model_or_path)
+
+    if local_sub_dir and subfolder:
+         model_path = os.path.join(local_dir, filename)
+    else:
+        model_path = Path(local_dir).joinpath(*subfolder.split('/'), filename).__str__()
+
+    if local_sub_dir:
+        model_path = os.path.join(local_dir, filename)
 
     if len(str(model_path)) >= 255:
         warnings.warn(f"Path {model_path} is too long, \n please change annotator_ckpts_path in config.yaml")

@@ -120,9 +120,9 @@ class OpenposeDetector:
             subfolder = ''
             face_pretrained_model_or_path = pretrained_model_or_path
 
-        body_model_path = custom_hf_download(pretrained_model_or_path, filename, subfolder=subfolder)
-        hand_model_path = custom_hf_download(pretrained_model_or_path, hand_filename, subfolder=subfolder)
-        face_model_path = custom_hf_download(face_pretrained_model_or_path, face_filename, subfolder=subfolder)
+        body_model_path = custom_hf_download(pretrained_model_or_path, filename, subfolder=subfolder, local_sub_dir="weights/openpose")
+        hand_model_path = custom_hf_download(pretrained_model_or_path, hand_filename, subfolder=subfolder, local_sub_dir="weights/openpose")
+        face_model_path = custom_hf_download(face_pretrained_model_or_path, face_filename, subfolder=subfolder, local_sub_dir="weights/openpose")
 
         body_estimation = Body(body_model_path)
         hand_estimation = Hand(hand_model_path)
