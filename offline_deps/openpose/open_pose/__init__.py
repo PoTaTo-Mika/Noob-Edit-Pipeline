@@ -128,6 +128,12 @@ class OpenposeDetector:
         hand_estimation = Hand(hand_model_path)
         face_estimation = Face(face_model_path)
 
+        print("开始torch.compile")
+        body_estimation.model =  torch.compile(body_estimation.model, mode="max-autotune", fullgraph=True)
+        hand_estimation.model = torch.compile(hand_estimation.model, mode="max-autotune", fullgraph=True)
+        face_estimation.model = torch.compile(face_estimation.model, mode="max-autotune", fullgraph=True)
+        print("编译成功")
+
         return cls(body_estimation, hand_estimation, face_estimation)
 
     def to(self, device):
