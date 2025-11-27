@@ -3,14 +3,15 @@ from diffusers import StableDiffusionXLControlNetPipeline, ControlNetModel, Eule
 from PIL import Image
 from main_pipeline.character_transfer.tag_classify import tag_classify
 import json
+from tools.pose_draw import draw_pose_from_json
 
 # ==========================================
 #  全局模型加载 (只运行一次)
 # ==========================================
 
 # 路径配置
-base_model_path = './noobai-v-pred-1.0.safetensors'
-controlnet_path = './noobai-xl-controlnet-openpose.safetensors'
+base_model_path = './checkpoints/weights/noob_vpred_1.0/noobai-v-pred-1.0.safetensors'
+controlnet_path = './checkpoints/weights/noob_openpose/openpose_pre.safetensors'
 
 # 通用负面提示词 
 DEFAULT_NEGATIVE_PROMPT = None
@@ -54,49 +55,44 @@ print(">> [系统启动] 模型加载完毕，等待任务...")
 # 我们数据就准备成openpose的json+随机抽取text_prompt的形式，每个json读取之后build几个角色
 def build_text_prompt(character_prompt, raw_prompt):
     # 对于原始的prompt，我们要用函数提取里面的内容
-    processed_prompt = tag_classify(raw_prompt) # 这里的processed_prompt是json
+    processed_prompt = tag_classify(raw_prompt,TAG_CATEGORIES) # 这里的processed_prompt是json
     cloth = processed_prompt.get("cloth", "None")
     action = processed_prompt.get("action", "None") 
     head = processed_prompt.get("head", "None")
     # 顺序不能变
-    final_prompt = BACKGROUD_PROMPT + head +','+ character_prompt +','+ cloth +','+ action
+    final_prompt = BACKGROUD_PROMPT + head +','+ character_prompt +','+ cloth +','+ action + 'masterpiece,best quality'
     return final_prompt 
 
-def generate_picture(text_prompt, openpose_img):
+def generate_picture(character_base_prompt, raw_tags, openpose_json_path):
+    """
+    Args:
+        character_base_prompt: 角色基础词，如 "dusk_(arknights), 1girl"
+        raw_tags: 原始 tag 串，用于提取动作和服装
+        openpose_json_path: 骨架 JSON 文件路径
+    """
     
-    # 自动获取 OpenPose 图片的尺寸，确保生成图与骨架严丝合缝
-    width, height = openpose_img.size
-    # 执行生成
+    # 1. 绘制骨架图
+    pose_image = draw_pose_from_json(openpose_json_path)
+    width, height = pose_image.size
+    
+    # 2. 构建 Prompt
+    text_prompt = build_text_prompt(character_base_prompt, raw_tags)
+    print(f"Generate Prompt: {text_prompt}")
+    
+    # 3. 生成
     result = pipe(
         prompt=text_prompt,
         negative_prompt=DEFAULT_NEGATIVE_PROMPT,
-        image=openpose_img,              # 传入骨架图
-        controlnet_conditioning_scale=1.0, # 严格听从骨架
+        image=pose_image,
+        controlnet_conditioning_scale=1.0, 
         width=width,
         height=height,
-        num_inference_steps=28,          # NoobAI 标准步数
-        guidance_scale=7.0,              # 二次元标准 CFG
+        num_inference_steps=28,
+        guidance_scale=7.0,
         output_type="pil"
     ).images[0]
     
     return result
 
-# ==========================================
-# 3. 简单测试调用 (示例)
-# ==========================================
-if __name__ == "__main__":
-    # 模拟数据 Pipeline 传入的数据
-    test_prompt = 'dusk_(arknights), masterpiece, best quality'
-    
-    # 创建一个测试用的 dummy pose (实际场景中你会从上游传入真实的 openpose image)
-    # 假设上游已经把图片处理成了 SDXL 喜欢的 1024x1024
-    test_pose_img = Image.new("RGB", (1024, 1024), (0, 0, 0))
-    
-    print(f"正在生成: {test_prompt} ...")
-    
-    # 调用函数
-    generated_image = generate_picture(test_prompt, test_pose_img)
-    
-    # 保存结果
-    generated_image.save("result_test.png")
-    print("测试生成完成。")
+def main():
+     pass
