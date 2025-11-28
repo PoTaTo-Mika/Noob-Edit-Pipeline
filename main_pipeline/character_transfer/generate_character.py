@@ -94,5 +94,7 @@ def generate_picture(character_base_prompt, raw_tags, openpose_json_path):
     
     return result
 
-def main():
-     pass
+# 我们从json里面读取到openpose结果，从另一个集体json里读取tag
+
+def get_json_and_tag(jsonl_openpose, jsonl_tag):
+     

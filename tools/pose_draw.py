@@ -5,6 +5,40 @@ from PIL import Image
 import math
 
 # ==========================================
+# 1. SDXL 黄金分辨率分桶 (Buckets)
+# ==========================================
+# SDXL 训练时的标准分辨率列表，总像素约为 1024*1024
+# 格式: (Width, Height)
+SDXL_BUCKETS = [
+    (1024, 1024), # 1:1 Square
+    (1152, 896),  (896, 1152), # 4:3 / 3:4 approx
+    (1216, 832),  (832, 1216), # 3:2 / 2:3 (NoobAI 常用)
+    (1344, 768),  (768, 1344), # 16:9 / 9:16 approx
+    (1536, 640),  (640, 1536), # 2.4:1 Ultra wide/tall
+]
+
+def get_optimal_bucket(orig_w, orig_h):
+    """
+    根据原始尺寸，寻找最接近的 SDXL 黄金分辨率
+    """
+    target_ar = orig_w / orig_h
+    best_bucket = None
+    min_diff = float('inf')
+
+    for (bw, bh) in SDXL_BUCKETS:
+        bucket_ar = bw / bh
+        diff = abs(bucket_ar - target_ar)
+        if diff < min_diff:
+            min_diff = diff
+            best_bucket = (bw, bh)
+    
+    # 如果没有找到（极少情况），默认回退到 1024x1024
+    if best_bucket is None:
+        return (1024, 1024)
+        
+    return best_bucket
+
+# ==========================================
 # OpenPose COCO-17 拓扑结构定义
 # ==========================================
 
@@ -43,9 +77,11 @@ def draw_pose_from_json(json_path):
         data = json.load(f)
 
     # 1. 获取画布尺寸
-    canvas_w = data.get("canvas_width", 512)
-    canvas_h = data.get("canvas_height", 784)
+    canvas_w = data.get("canvas_width", 1024)
+    canvas_h = data.get("canvas_height", 1024)
     
+    target_w, target_h = get_optimal_bucket(canvas_w, canvas_h)
+
     # 创建纯黑背景
     canvas = np.zeros((canvas_h, canvas_w, 3), dtype=np.uint8)
 
